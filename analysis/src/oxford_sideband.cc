@@ -277,10 +277,10 @@ OxfordSidebandAnalysis::OxfordSidebandAnalysis(runCard const& run, sampleCard co
 
     std::cout << "Oxford PU subtraction: " << subtractPU << std::endl;
 }
-
+//work by Jordan: added finalState const and higgsfs
 void OxfordSidebandAnalysis::Analyse(bool const& signal, double const& weightnorm,
-                                     finalState const& ifs) {
-    Analysis::Analyse(signal, weightnorm, ifs);
+                                     finalState const& ifs, finalState const& higgsfs) {
+    Analysis::Analyse(signal, weightnorm, ifs, higgsfs);
 
     // Perform softKiller subtraction
     const fastjet::contrib::SoftKiller soft_killer(2.5, 0.4);

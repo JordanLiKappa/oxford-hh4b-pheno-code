@@ -1,4 +1,4 @@
-// oxford_res_fr.cc
+ // oxford_res_fr.cc
 
 #include "YODA/Histo1D.h"
 #include "YODA/Histo2D.h"
@@ -49,7 +49,9 @@ double const ycut = 0.09;
 
 // SoftKiller PU removal
 const fastjet::contrib::SoftKiller soft_killer(2.5, 0.4);
-
+//I changed the ctag_prob from .1 to .01, no effect at all
+//try changed bmistag 0.01 to 0.1 , no effect at all
+//try changed b tag from 0.8 to 0.6, no effect at all
 // b tagging
 // Choose working point with high purity
 const double btag_prob   = 0.80; // Probability of correct b tagging
@@ -58,9 +60,19 @@ const double ctag_prob   = 0.1;  // 0.17; // c-mistag rate ~1/6.
 
 // Analysis settings
 const int         nAnalysis          = 3;
-const int         nCuts              = 7;
+//const int         nCuts              = 7;
 const std::string aString[nAnalysis] = {"_res", "_inter", "_boost"};
-const std::string cString[nCuts]     = {"_C0", "_C1a", "_C1b", "_C1c", "_C1d", "_C1e", "_C2"};
+//const std::string cString[nCuts]     = {"_C0", "_C1a", "_C1b", "_C1c", "_C1d", "_C1e", "_C2"};
+
+//Work by Jordan: change histogram settings
+const int         nCuts            = 36;
+const std::string cString[nCuts]       =  {"_C0", "_C1a", "_C1b", "_C1c", "_C1d","_C1e", "_4b", "_4bC2","_3b","_3bC2","_2b","_2bC2","_1b","_1bC2","3","2","1","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"};
+
+
+
+
+
+
 
 // nTag: How many b-tags are required
 // nB: How many true b-jets are present
@@ -128,7 +140,7 @@ OxfordAnalysis::OxfordAnalysis(runCard const& run, sampleCard const& sample, int
     const int nbins = 30;
 
     // ********************* Histogram definitions ******************
-
+    // I changed here (nCuts -> 7)
     for (int i = 0; i < nAnalysis; i++) {
         BookHistogram(new YODA::Histo1D(nCuts, 0, nCuts), "CF" + aString[i]);
         BookHistogram(new YODA::Histo1D(nCuts, 0, nCuts), "CFN" + aString[i]);
@@ -146,7 +158,7 @@ OxfordAnalysis::OxfordAnalysis(runCard const& run, sampleCard const& sample, int
 
             BookHistogram(new YODA::Histo1D(nbins, pt_min, pt_max), "pt_H0" + suffix);
             BookHistogram(new YODA::Histo1D(nbins, pt_min, pt_max), "pt_H1" + suffix);
-
+            BookHistogram(new YODA::Histo1D(nbins, 0, pt_max),"deltapt" + suffix);
             BookHistogram(new YODA::Histo1D(nbins, m_min, m_max), "m_H0" + suffix);
             BookHistogram(new YODA::Histo1D(nbins, m_min, m_max), "m_H1" + suffix);
 
@@ -236,16 +248,17 @@ OxfordAnalysis::OxfordAnalysis(runCard const& run, sampleCard const& sample, int
     bstNTuple << tupleSpec
               << " split12_fj1 split12_fj2 tau21_fj1 tau21_fj2 C2_fj1 C2_fj2 D2_fj1 D2_fj2"
               << std::endl;
-
+    // I changed here (nCuts->7)          
     // Category overlap
     for (int i = 0; i < nCuts; i++)
         BookHistogram(new YODA::Histo1D(8, 0, 8), "Categories" + cString[i]);
 
     std::cout << "Oxford PU subtraction: " << subtractPU << std::endl;
 }
-
-void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, finalState const& ifs, double gen_weight) {
-    Analysis::Analyse(signal, weightnorm, ifs, gen_weight);
+// work by Jordan:
+// added finalState const higgsfs, added higgsfs to analysis
+void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, finalState const& ifs,finalState const& higgsfs, double gen_weight) {
+    Analysis::Analyse(signal, weightnorm, ifs, higgsfs, gen_weight);
 
     if( debug ) std::cout << "Starting event-by-event analysis." << std::endl;
 
@@ -278,19 +291,20 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
     // *************************************
 
     // Large-R jet cuts
-    const double LR_minPT  = 200;
+    const double LR_minPT  = 250;
+    const double LR_maxPT  = 400;
     const double LR_maxEta = 2.0;
 
     // Small-R jet cuts
-    const double SR_minPT  = 40;
+    const double SR_minPT  = 0.4;
     const double SR_maxEta = 2.5;
 
     // Track jet cuts
-    const double TJ_minPT  = 50;
+    const double TJ_minPT  = 10;
     const double TJ_maxEta = 2.5;
 
     // Higgs mass-window
-    const double massWindow = 40;
+    const double massWindow = 35;
 
     // ********************************* Jet clustering  ***************************************
 
@@ -327,20 +341,92 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
     else {
         largeRJets_noCut = sorted_by_pt(largeRJets_noTrim);
     }
-
+    
     // pT cut and resort
+    //work by Jordan: I change here, added LR_maxpt
     std::vector<fastjet::PseudoJet> largeRJets_pTcut;
     for (size_t i = 0; i < largeRJets_noCut.size(); i++)
-        if (largeRJets_noCut[i].pt() > LR_minPT) largeRJets_pTcut.push_back(largeRJets_noCut[i]);
+        if (largeRJets_noCut[i].pt() > LR_minPT && largeRJets_noCut[i].pt() < LR_maxPT) largeRJets_pTcut.push_back(largeRJets_noCut[i]);
     largeRJets_pTcut = sorted_by_pt(
           largeRJets_pTcut); // Shouldn't be needed, but im not taking any chances at this stage
-
+    
     // Eta cut
     std::vector<fastjet::PseudoJet> largeRJets_etacut;
     for (size_t i = 0; i < largeRJets_pTcut.size(); i++) {
         if (fabs(largeRJets_pTcut[i].eta()) <= LR_maxEta)
             largeRJets_etacut.push_back(largeRJets_pTcut[i]);
     }
+    
+    //following is the code with 2b cut before MDT
+    /*//work by Jordan: added a b cut after the eta cut
+    
+    std::vector<fastjet::PseudoJet> largeRJets_bcut;
+        for (size_t i = 0; i < largeRJets_etacut.size(); i++){
+            
+            float numberofB = 0;
+            float dR_b1 = largeRJets_etacut[i].delta_R(higgsfs[2]);
+            float dR_b2 = largeRJets_etacut[i].delta_R(higgsfs[3]);
+            float dR_b_bar1 = largeRJets_etacut[i].delta_R(higgsfs[4]);
+            float dR_b_bar2 = largeRJets_etacut[i].delta_R(higgsfs[5]);
+            float deltaRHiggsjet1 = largeRJets_etacut[i].delta_R(higgsfs[0]);
+            float deltaRHiggsjet2 = largeRJets_etacut[i].delta_R(higgsfs[1]);
+            
+
+            std::cout <<"number of jets: "<<largeRJets_etacut.size() <<"jet number: "<<  i+1  << "  dR_b1: " << dR_b1 << "  dR_b2 " << dR_b2 <<"  dR_b_bar1 " << dR_b_bar1 << "  dR_b_bar2 " << dR_b_bar2<< "  deltaRHiggsjet1 : "<<deltaRHiggsjet1<< "  deltaRHiggsjet2 : "<<deltaRHiggsjet2 <<std::endl;
+            
+            if (dR_b1 <= 1.0) numberofB += 1;
+            if (dR_b2 <= 1.0) numberofB += 1;            
+            if (dR_b_bar1 <= 1.0) numberofB += 1;
+            if (dR_b_bar2 <= 1.0) numberofB += 1;
+            std::cout<< "jet number: " <<i+1 <<"numberofB in the ith jet: " << numberofB << std::endl;
+            if ( (dR_b1 <= 1.0 && dR_b_bar1 <= 1.0) || (dR_b1 <= 1.0 && dR_b_bar2 <= 1.0) || (dR_b2 <= 1.0 && dR_b_bar1 <= 1.0) || (dR_b2 <= 1.0 && dR_b_bar2 <= 1.0) || (dR_b1 <= 1.0 && dR_b2 <= 1.0) || (dR_b_bar1 <= 1.0 && dR_b_bar2 <= 1.0)){
+                largeRJets_bcut.push_back(largeRJets_etacut[i]);
+            }
+
+        }
+    // Cluster small-R track jets
+    const fastjet::JetDefinition          jd_subjets(fastjet::antikt_algorithm, GAjetR);
+    const fastjet::ClusterSequence        cs_subjets(fs, jd_subjets);
+    const std::vector<fastjet::PseudoJet> trackjets_nocut =
+          sorted_by_pt(cs_subjets.inclusive_jets());
+    const std::vector<fastjet::PseudoJet> trackjets_pTcut =
+          sorted_by_pt(cs_subjets.inclusive_jets(TJ_minPT));
+
+    // Eta cut
+    std::vector<fastjet::PseudoJet> trackJets_etacut;
+    for (size_t i = 0; i < trackjets_pTcut.size(); i++)
+        if (fabs(trackjets_pTcut[i].eta()) <= TJ_maxEta)
+            trackJets_etacut.push_back(trackjets_pTcut[i]);
+
+    // Final sorted jets
+    const std::vector<fastjet::PseudoJet> smallRJets = sorted_by_pt(smallRJets_etacut);
+    const std::vector<fastjet::PseudoJet> trackJets  = sorted_by_pt(trackJets_etacut);
+
+    // ********************************************* MDT
+    // *********************************************************
+
+    // Check if jets are mass-drop tagged
+    const fastjet::JetDefinition  CA10(fastjet::cambridge_algorithm, 1.0);
+    const fastjet::MassDropTagger md_tagger(mu, ycut);
+
+    std::vector<fastjet::PseudoJet> MDTJets;
+    for (size_t i = 0; i < largeRJets_bcut.size(); i++) {
+        const fastjet::ClusterSequence  cs_sub(largeRJets_bcut[i].constituents(), CA10);
+        std::vector<fastjet::PseudoJet> ca_jets = sorted_by_pt(cs_sub.inclusive_jets());
+        if (ca_jets.size() == 0) continue;
+        const fastjet::PseudoJet ca_jet     = ca_jets[0];
+        const fastjet::PseudoJet tagged_jet = md_tagger(ca_jet);
+        if (tagged_jet != 0) MDTJets.push_back(largeRJets_bcut[i]);
+    
+
+    const std::vector<fastjet::PseudoJet> largeRJets = sorted_by_pt(MDTJets);*/
+
+
+    //the code with 2b before mdt ends here
+
+    //work by Jordan: added a b cut after the eta cut}
+    
+    
 
     // Cluster small-R track jets
     const fastjet::JetDefinition          jd_subjets(fastjet::antikt_algorithm, GAjetR);
@@ -368,7 +454,9 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
     const fastjet::MassDropTagger md_tagger(mu, ycut);
 
     std::vector<fastjet::PseudoJet> MDTJets;
-    for (size_t i = 0; i < largeRJets_etacut.size(); i++) {
+    
+    for (size_t i = 0; i < largeRJets_etacut.size(); i++) 
+    {
         const fastjet::ClusterSequence  cs_sub(largeRJets_etacut[i].constituents(), CA10);
         std::vector<fastjet::PseudoJet> ca_jets = sorted_by_pt(cs_sub.inclusive_jets());
         if (ca_jets.size() == 0) continue;
@@ -376,7 +464,42 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
         const fastjet::PseudoJet tagged_jet = md_tagger(ca_jet);
         if (tagged_jet != 0) MDTJets.push_back(largeRJets_etacut[i]);
     }
+        //following is the code with bcut after MDT
+       /* std::vector<fastjet::PseudoJet> largeRJets_bcut;
+        //added sorting in pT, keeping only the leading and subleading before 2 b
+        if (MDTJets.size() == 2)
+    {
+        for (size_t i = 0; i < 2; i++)
+        {
+            
+            float numberofB = 0;
+            float dR_b1 = MDTJets[i].delta_R(higgsfs[2]);
+            float dR_b2 = MDTJets[i].delta_R(higgsfs[3]);
+            float dR_b_bar1 = MDTJets[i].delta_R(higgsfs[4]);
+            float dR_b_bar2 = MDTJets[i].delta_R(higgsfs[5]);
+            float deltaRHiggsjet1 = MDTJets[i].delta_R(higgsfs[0]);
+            float deltaRHiggsjet2 = MDTJets[i].delta_R(higgsfs[1]);
+            
 
+            std::cout <<"number of jets: "<<MDTJets.size() <<"jet number: "<<  i+1  << "  dR_b1: " << dR_b1 << "  dR_b2 " << dR_b2 <<"  dR_b_bar1 " << dR_b_bar1 << "  dR_b_bar2 " << dR_b_bar2<< "  deltaRHiggsjet1 : "<<deltaRHiggsjet1<< "  deltaRHiggsjet2 : "<<deltaRHiggsjet2 <<std::endl;
+            
+            if (dR_b1 <= 1.0) numberofB += 1;
+            if (dR_b2 <= 1.0) numberofB += 1;            
+            if (dR_b_bar1 <= 1.0) numberofB += 1;
+            if (dR_b_bar2 <= 1.0) numberofB += 1;
+            std::cout<< "jet number: " <<i+1 <<"numberofB in the ith jet: " << numberofB << std::endl;
+            if ( (dR_b1 <= 1.0 && dR_b_bar1 <= 1.0) || (dR_b1 <= 1.0 && dR_b_bar2 <= 1.0) || (dR_b2 <= 1.0 && dR_b_bar1 <= 1.0) || (dR_b2 <= 1.0 && dR_b_bar2 <= 1.0) || (dR_b1 <= 1.0 && dR_b2 <= 1.0) || (dR_b_bar1 <= 1.0 && dR_b_bar2 <= 1.0)){
+                largeRJets_bcut.push_back(MDTJets[i]);
+            
+            }
+
+        }
+
+    }    */
+
+    //I changed here 
+    //const std::vector<fastjet::PseudoJet> largeRJets = sorted_by_pt(largeRJets_bcut);
+    
     const std::vector<fastjet::PseudoJet> largeRJets = sorted_by_pt(MDTJets);
 
     // ***************************************** Initial histograms
@@ -404,12 +527,19 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
 
     BTagging(largeRJets, trackJets, leading_subjet, subleading_subjet, nBSubjetsLR_vec,
              nCSubjetsLR_vec, nLSubjetsLR_vec);
+    
+    
+
     if (largeRJets.size() != nBSubjetsLR_vec.size())
         std::cout << "ERROR: b-tagging vector sizes don't match number of fat jets" << std::endl;
 
     // b-tagging for small-R jets
     std::vector<btagType> tagType_SR;
     BTagging(smallRJets, tagType_SR);
+
+
+//Jordan:
+//check 
 
     // **************************************** Boosted analysis
     // *********************************************
@@ -435,46 +565,334 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
                 FillHistogram("CFN_boost", 1., 3.1);
                 JetFill(smallRJets, largeRJets_etacut, "boost", 3, event_weight);
                 bstClassified[3] = true;
+               
+               // work by Jordan
+               // give a # of fatjets distribution
+               // give number of b inside the jets
 
-                if (largeRJets.size() >= 2) // MDT
-                {
-                    HiggsFill(largeRJets[0], largeRJets[1], "boost", 4, event_weight);
-                    JetFill(smallRJets, largeRJets, "boost", 4, event_weight);
-                    bstClassified[4] = true;
+                            /*if (largeRJets_etacut.size() == 1)
+                                {
+                                FillHistogram("CF_boost", event_weight, 16);
+                                FillHistogram("CFN_boost", 1., 16);
+                                //JetFill(smallRJets, largeRJets_etacut, "boost", 16, event_weight);
+                                //bstClassified[16] = true;
+                                float numberofB = 0;
+                                //count number of b in the jet
+                                size_t i;
+                                for (i =0; i < 1; i++)
+                                {
+                                    float dR_b1 = largeRJets_etacut[i].delta_R(higgsfs[2]);
+                                    float dR_b2 = largeRJets_etacut[i].delta_R(higgsfs[3]);
+                                    float dR_b_bar1 = largeRJets_etacut[i].delta_R(higgsfs[4]);
+                                    float dR_b_bar2 = largeRJets_etacut[i].delta_R(higgsfs[5]);
+                                    
+                                    if (dR_b1 <= 1.0) numberofB += 1;
+                                    if (dR_b2 <= 1.0) numberofB += 1;            
+                                    if (dR_b_bar1 <= 1.0) numberofB += 1;
+                                    if (dR_b_bar2 <= 1.0) numberofB += 1;
+                                }
+                                for (i = 0; i <= 3; i++)
+                                    {if (numberofB == i)
+                                        {   FillHistogram("CF_boost", event_weight, 17+i);
+                                            FillHistogram("CFN_boost", 1., 17+i);
+                                            //JetFill(smallRJets, largeRJets_etacut, "boost", 17+i, event_weight);
+                                            //bstClassified[17+i] = true;
 
-                    // Higgs mass-window
-                    const double diffHiggs_0 = fabs(largeRJets[0].m() - 125.);
-                    const double diffHiggs_1 = fabs(largeRJets[1].m() - 125.);
+                                        } 
 
-                    if ((diffHiggs_0 < massWindow) && (diffHiggs_1 < massWindow)) {
-                        HiggsFill(largeRJets[0], largeRJets[1], "boost", 5, event_weight);
-                        BoostFill(largeRJets[0], largeRJets[1], "boost", 5, event_weight);
-                        JetFill(smallRJets, largeRJets, "boost", 5, event_weight);
-                        SubJetFill(leading_subjet, subleading_subjet, "boost", 5, event_weight);
-                        bstClassified[5] = true;
+                                    }
+                                } 
 
-                        // b-tagging weights
-                        const int nB =
-                              nBSubjetsLR_vec[0] + nBSubjetsLR_vec[1]; // Number of true b-subjets
-                        const int nC =
-                              nCSubjetsLR_vec[0] + nCSubjetsLR_vec[1]; // Number of fake b-subjets
-                        const int nL =
-                              nLSubjetsLR_vec[0] + nLSubjetsLR_vec[1]; // Number of fake b-subjets
+                            if (largeRJets_etacut.size() == 2)
+                                {
+                                FillHistogram("CF_boost", event_weight, 21);
+                                FillHistogram("CFN_boost", 1., 21);
+                                //JetFill(smallRJets, largeRJets_etacut, "boost", 21, event_weight);
+                                //bstClassified[21] = true;
 
-                        // Selection probability
-                        if (nB + nC + nL == 4) // Selected 4 candidates
+                                size_t i;   
+                                //count number of b in the jet(there are two jets)
+                                    for (i =0; i < 2; i++)
+                                    {   float numberofB = 0;
+                                        float dR_b1 = largeRJets_etacut[i].delta_R(higgsfs[2]);
+                                        float dR_b2 = largeRJets_etacut[i].delta_R(higgsfs[3]);
+                                        float dR_b_bar1 = largeRJets_etacut[i].delta_R(higgsfs[4]);
+                                        float dR_b_bar2 = largeRJets_etacut[i].delta_R(higgsfs[5]);
+                                        
+                                        if (dR_b1 <= 1.0) numberofB += 1;
+                                        if (dR_b2 <= 1.0) numberofB += 1;            
+                                        if (dR_b_bar1 <= 1.0) numberofB += 1;
+                                        if (dR_b_bar2 <= 1.0) numberofB += 1;
+                                    float j;
+                                    for (j = 0; j <= 3; j++)
+                                        {if (numberofB == j)
+                                            {   FillHistogram("CF_boost", event_weight, 22+j);
+                                                FillHistogram("CFN_boost", 1., 22+j);
+                                    //            JetFill(smallRJets, largeRJets_etacut, "boost", 22+j, event_weight);
+                                    //            bstClassified[22+j] = true;
+
+                                            } 
+
+                                        }
+                                    }    
+                                }
+                            if (largeRJets_etacut.size() == 3)
+                                {
+                                FillHistogram("CF_boost", event_weight, 26);
+                                //FillHistogram("CFN_boost", 1., 26);
+                                //JetFill(smallRJets, largeRJets_etacut, "boost", 26, event_weight);
+                                bstClassified[26] = true;
+                                //count number of b in the jet(there are two jets)
+                                    size_t i;
+                                    for (i =0; i < 3; i++)
+                                    {   float numberofB = 0;
+                                        float dR_b1 = largeRJets_etacut[i].delta_R(higgsfs[2]);
+                                        float dR_b2 = largeRJets_etacut[i].delta_R(higgsfs[3]);
+                                        float dR_b_bar1 = largeRJets_etacut[i].delta_R(higgsfs[4]);
+                                        float dR_b_bar2 = largeRJets_etacut[i].delta_R(higgsfs[5]);
+                                       
+                                        if (dR_b1 <= 1.0) numberofB += 1;
+                                        if (dR_b2 <= 1.0) numberofB += 1;            
+                                        if (dR_b_bar1 <= 1.0) numberofB += 1;
+                                        if (dR_b_bar2 <= 1.0) numberofB += 1;
+                                    float j;
+                                    for (j = 0; j <= 3; j++)
+                                        {if (numberofB == j)
+                                            {   FillHistogram("CF_boost", event_weight, 27+j);
+                                                FillHistogram("CFN_boost", 1., 27+j);
+                                                //JetFill(smallRJets, largeRJets_etacut, "boost", 27+j, event_weight);
+                                                //bstClassified[27+j] = true;
+
+                                            } 
+
+                                        }
+                                    }
+                                }
+                            if (largeRJets_etacut.size() == 4)
+                                {
+                                FillHistogram("CF_boost", event_weight, 31);
+                                FillHistogram("CFN_boost", 1., 31);
+                                //JetFill(smallRJets, largeRJets_etacut, "boost", 21, event_weight);
+                                //bstClassified[21] = true;
+
+                                size_t i;   
+                                //count number of b in the jet(there are two jets)
+                                    for (i =0; i < 2; i++)
+                                    {   float numberofB = 0;
+                                        float dR_b1 = largeRJets_etacut[i].delta_R(higgsfs[2]);
+                                        float dR_b2 = largeRJets_etacut[i].delta_R(higgsfs[3]);
+                                        float dR_b_bar1 = largeRJets_etacut[i].delta_R(higgsfs[4]);
+                                        float dR_b_bar2 = largeRJets_etacut[i].delta_R(higgsfs[5]);
+                                        
+                                        if (dR_b1 <= 1.0) numberofB += 1;
+                                        if (dR_b2 <= 1.0) numberofB += 1;            
+                                        if (dR_b_bar1 <= 1.0) numberofB += 1;
+                                        if (dR_b_bar2 <= 1.0) numberofB += 1;
+                                    float j;
+                                    for (j = 0; j <= 3; j++)
+                                        {if (numberofB == j)
+                                            {   FillHistogram("CF_boost", event_weight, 32+j);
+                                                FillHistogram("CFN_boost", 1., 32+j);
+                                    //            JetFill(smallRJets, largeRJets_etacut, "boost", 22+j, event_weight);
+                                    //            bstClassified[22+j] = true;
+
+                                            } 
+
+                                        }
+                                    }    
+                                }*/   
+
+                    //following is the code with 2b before MDT
+                    /*if (largeRJets_bcut.size() >= 2) // b cut
+                { 
+                        FillHistogram("CF_boost", event_weight, 4);
+                        FillHistogram("CFN_boost", 1., 4);
+                        JetFill(smallRJets, largeRJets_bcut, "boost", 4, event_weight);
+                        bstClassified[4] = true;
+                        float deltaRHiggsjet1 = largeRJets[0].delta_R(higgsfs[0]);
+                        float deltaRHiggsjet2 = largeRJets[0].delta_R(higgsfs[1]);
+                        float deltaRHiggsjet3 = largeRJets[1].delta_R(higgsfs[0]);
+                        float deltaRHiggsjet4 = largeRJets[1].delta_R(higgsfs[1]);
+
+                        if (  ( deltaRHiggsjet1 <= 1 && deltaRHiggsjet4 <= 1 )  ||  ( deltaRHiggsjet2 <= 1 && deltaRHiggsjet3 <= 1 )  ) // 2 higgs cut
+                    { 
+                            HiggsFill(largeRJets[0], largeRJets[1], "boost", 5, event_weight);
+                            BoostFill(largeRJets[0], largeRJets[1], "boost", 5, event_weight);
+                            JetFill(smallRJets, largeRJets, "boost", 5, event_weight);
+                            SubJetFill(leading_subjet, subleading_subjet, "boost", 5, event_weight);
+                            bstClassified[5] = true;*/
+                                        
+                        
+
+
+                            if (MDTJets.size() >= 2) // MDT
                         {
-                            P_select_boost = btagProb(4, nB, nC, nL);
+                                HiggsFill(MDTJets[0], MDTJets[1], "boost", 4, event_weight);
+                                JetFill(smallRJets, MDTJets, "boost", 4, event_weight);
+                                bstClassified[4] = true;
+                                
+                                /*//code with 2b after mdt
+                                if (largeRJets_bcut.size() >= 2) // b cut
+                { 
+                        FillHistogram("CF_boost", event_weight, 5);
+                        FillHistogram("CFN_boost", 1., 5);
+                        JetFill(smallRJets, largeRJets_bcut, "boost", 5, event_weight);
+                        bstClassified[5] = true;*/
+                        
 
-                            // Reweighted event weight
-                            const double             boost_weight  = P_select_boost * event_weight;
-                            const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
+                        //changed here: comment out to avoid segmantation error in the background sample
+                        /*float deltaRHiggsjet1 = largeRJets[0].delta_R(higgsfs[0]);
+                        float deltaRHiggsjet2 = largeRJets[0].delta_R(higgsfs[1]);
+                        float deltaRHiggsjet3 = largeRJets[1].delta_R(higgsfs[0]);
+                        float deltaRHiggsjet4 = largeRJets[1].delta_R(higgsfs[1]);*/
 
-                            HiggsFill(largeRJets[0], largeRJets[1], "boost", 6, boost_weight);
-                            BoostFill(largeRJets[0], largeRJets[1], "boost", 6, boost_weight);
-                            JetFill(smallRJets, largeRJets, "boost", 6, boost_weight);
-                            SubJetFill(leading_subjet, subleading_subjet, "boost", 6, boost_weight);
-                            bstClassified[6] = true;
+                        //if (  ( deltaRHiggsjet1 <= 1 && deltaRHiggsjet4 <= 1 )  ||  ( deltaRHiggsjet2 <= 1 && deltaRHiggsjet3 <= 1 )  )         // 2 higgs cut
+                                if (true)
+                    { 
+                            /*HiggsFill(largeRJets[0], largeRJets[1], "boost", 6, event_weight);
+                            BoostFill(largeRJets[0], largeRJets[1], "boost", 6, event_weight);
+                            JetFill(smallRJets, largeRJets, "boost", 6, event_weight);
+                            SubJetFill(leading_subjet, subleading_subjet, "boost", 6, event_weight);
+                            bstClassified[6] = true;*/
+
+                                const double diffHiggs_0 = fabs(largeRJets[0].m() - 111.);
+                                const double diffHiggs_1 = fabs(largeRJets[1].m() - 111.);
+
+                                if ((diffHiggs_0 < massWindow) && (diffHiggs_1 < massWindow)) 
+                            {
+                                    HiggsFill(largeRJets[0], largeRJets[1], "boost", 7, event_weight);
+                                    BoostFill(largeRJets[0], largeRJets[1], "boost", 7, event_weight);
+                                    JetFill(smallRJets, largeRJets, "boost", 7, event_weight);
+                                    SubJetFill(leading_subjet, subleading_subjet, "boost", 7, event_weight);
+                                    bstClassified[7] = true;
+
+                                    // b-tagging weights
+                                    const int nB =
+                                          nBSubjetsLR_vec[0] + nBSubjetsLR_vec[1]; // Number of true b-subjets
+                                    const int nC =
+                                          nCSubjetsLR_vec[0] + nCSubjetsLR_vec[1]; // Number of fake b-subjets
+                                    const int nL =
+                                          nLSubjetsLR_vec[0] + nLSubjetsLR_vec[1]; // Number of fake b-subjets
+
+
+                                    //first case: 2b in each largeRjet
+
+                                   // if ( //nBSubjetsLR_vec[0] == 2 && nBSubjetsLR_vec[1] == 2
+                                         
+                        			//{
+                        				/*FillHistogram("CF_boost", event_weight, 8);
+                                        HiggsFill(largeRJets[0], largeRJets[1], "boost", 8, event_weight);
+                        				BoostFill(largeRJets[0], largeRJets[1], "boost", 8, event_weight);
+                        				JetFill(smallRJets, largeRJets, "boost", 8, event_weight);
+                        				SubJetFill(leading_subjet, subleading_subjet, "boost", 8, event_weight);
+                        				bstClassified[8] = true;*/
+            			
+                                    // Selection probability
+                                   		// if (true) // Selected 4 candidates
+                                          
+                                       		P_select_boost = 0.59;
+
+                                      		  // Reweighted event weight
+                                     		const double             boost_weight  = P_select_boost * event_weight;
+                                    		const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
+
+                                      		HiggsFill(largeRJets[0], largeRJets[1], "boost", 9, boost_weight);
+                                       		BoostFill(largeRJets[0], largeRJets[1], "boost", 9, boost_weight);
+                                    		JetFill(smallRJets, largeRJets, "boost", 9, boost_weight);
+                                    		SubJetFill(leading_subjet, subleading_subjet, "boost", 9, boost_weight);
+                                        	bstClassified[9] = true;
+            			 	               
+            		              	//}
+
+/*
+            			            / //second case: three b jets in sub leading and leading jets, where 2 bjets in the leading jet or 2b jets in the sub leading jet
+                        			if ( (nBSubjetsLR_vec[0] == 2 && nBSubjetsLR_vec[1] == 1)|| (nBSubjetsLR_vec[0] == 1 && nBSubjetsLR_vec[1] == 2))
+                        			{    FillHistogram("CF_boost", event_weight, 10);
+            				            HiggsFill(largeRJets[0], largeRJets[1], "boost", 10, event_weight);
+                            	        BoostFill(largeRJets[0], largeRJets[1], "boost", 10, event_weight);
+                            	        JetFill(smallRJets, largeRJets, "boost", 10, event_weight);
+                           	  	        SubJetFill(leading_subjet, subleading_subjet, "boost", 10, event_weight);
+                              	        bstClassified[10] = true;
+            				
+                                    // Selection probability
+                                   		 if (nB + nC + nL == 4) // Selected 4 candidates
+                                  		  {
+                                       		P_select_boost = btagProb(3, nB, nC, nL);
+
+                                      		  // Reweighted event weight
+                                     		const double             boost_weight  = P_select_boost * event_weight;
+                                    		const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
+
+                                      		HiggsFill(largeRJets[0], largeRJets[1], "boost", 11, boost_weight);
+                                       		BoostFill(largeRJets[0], largeRJets[1], "boost", 11, boost_weight);
+                                    		JetFill(smallRJets, largeRJets, "boost", 11, boost_weight);
+                                    		SubJetFill(leading_subjet, subleading_subjet, "boost", 11, boost_weight);
+                                        	bstClassified[11] = true;
+            			 	               }
+            			            }
+
+
+
+                        			//third case: two b jets in sub leading and leading jets, where 2 bjets in the leading jet or 2b jets in the sub leading jet or 1 in each
+                        			if ( (nBSubjetsLR_vec[0] == 2 && nBSubjetsLR_vec[1] == 0)|| (nBSubjetsLR_vec[0] == 0 && nBSubjetsLR_vec[1] == 2)|| (nBSubjetsLR_vec[0] == 1 && nBSubjetsLR_vec[1] == 1))
+                        			{   
+                                        FillHistogram("CF_boost", event_weight, 12);
+                                        /*HiggsFill(largeRJets[0], largeRJets[1], "boost", 12, event_weight);
+                            	        BoostFill(largeRJets[0], largeRJets[1], "boost", 12, event_weight);
+                            	        JetFill(smallRJets, largeRJets, "boost", 12, event_weight);
+                           	  	        SubJetFill(leading_subjet, subleading_subjet, "boost", 12, event_weight);
+                              	        bstClassified[12] = true;*/
+            				
+                                   /* // Selection probability
+                                   		 if (nB + nC + nL == 4) // Selected 4 candidates
+                                  		  {
+                                       		P_select_boost = btagProb(2, nB, nC, nL);
+
+                                      		  // Reweighted event weight
+                                     		const double             boost_weight  = P_select_boost * event_weight;
+                                    		const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
+
+                                      		HiggsFill(largeRJets[0], largeRJets[1], "boost", 13, boost_weight);
+                                       		BoostFill(largeRJets[0], largeRJets[1], "boost", 13, boost_weight);
+                                    		JetFill(smallRJets, largeRJets, "boost", 13, boost_weight);
+                                    		SubJetFill(leading_subjet, subleading_subjet, "boost", 13, boost_weight);
+                                        	bstClassified[13] = true;
+            			 	               }
+            			            }
+
+
+            			            //fourth case: one b jet in sub leading or leading jet
+                        			if ( (nBSubjetsLR_vec[0] == 1 && nBSubjetsLR_vec[1] == 0)|| (nBSubjetsLR_vec[0] == 0 && nBSubjetsLR_vec[1] == 1))
+                        			{   
+                                        FillHistogram("CF_boost", event_weight, 14); 
+            				            HiggsFill(largeRJets[0], largeRJets[1], "boost", 14, event_weight);
+                            	        BoostFill(largeRJets[0], largeRJets[1], "boost", 14, event_weight);
+                            	        JetFill(smallRJets, largeRJets, "boost", 14, event_weight);
+                           	  	        SubJetFill(leading_subjet, subleading_subjet, "boost", 14, event_weight);
+                              	        bstClassified[14] = true;
+
+                                    // Selection probability
+                                   		  if (nB + nC + nL == 4) // Selected 4 candidates
+                                  		  {
+                                       		P_select_boost = btagProb(1, nB, nC, nL);
+
+                                      		  // Reweighted event weight
+                                     		const double             boost_weight  = P_select_boost * event_weight;
+                                    		const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
+
+                                      		HiggsFill(largeRJets[0], largeRJets[1], "boost", 15, boost_weight);
+                                       		BoostFill(largeRJets[0], largeRJets[1], "boost", 15, boost_weight);
+                                    		JetFill(smallRJets, largeRJets, "boost", 15, boost_weight);
+                                    		SubJetFill(leading_subjet, subleading_subjet, "boost", 15, boost_weight);
+                                        	bstClassified[15] = true;
+            			 	               }
+            			            }*/
+
+
+
+            			    
+            				
+            				
 
                             // Calculate some substructure variables
                             const std::vector<double> split12_vec = SplittingScales(largeRJets);
@@ -507,13 +925,13 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
 
                             Pass(boost_weight);
                             passed_weight += boost_weight;
+                            }   
                         }
                     }
-                }
+                /*}*/
             }
         }
     }
-
     // ************************************* Intermediate analysis
     // ********************************************
 
@@ -560,8 +978,8 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
             intClassified[4] = true;
 
             // Higgs mass-window
-            const double diffHiggs_0 = fabs(higgs_inter[0].m() - 125.);
-            const double diffHiggs_1 = fabs(higgs_inter[1].m() - 125.);
+            const double diffHiggs_0 = fabs(higgs_inter[0].m() - 111.);
+            const double diffHiggs_1 = fabs(higgs_inter[1].m() - 111.);
 
             if ((diffHiggs_0 < massWindow) && (diffHiggs_1 < massWindow)) {
                 HiggsFill(higgs_inter[0], higgs_inter[1], "inter", 5, event_weight);
@@ -716,6 +1134,7 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
                             passed_weight += res_weight;
                         }
                     }
+                
                 }
             }
         }
@@ -723,7 +1142,7 @@ void OxfordAnalysis::Analyse(bool const& signal, double const& weightnorm, final
 
     // ************************************* Categorisation
     // ********************************************
-
+    //I changed here(ncut->7)
     for (int icut = 0; icut < nCuts; icut++) {
         const std::string histoname = "Categories" + cString[icut];
         double            coord     = 0;
@@ -789,7 +1208,7 @@ void OxfordAnalysis::BTagging(std::vector<fastjet::PseudoJet> const& jets_vec,
         btag_vec.push_back(type);
     }
 }
-
+//comment by Jordan: Large-R B-tagging?
 void OxfordAnalysis::BTagging(std::vector<fastjet::PseudoJet> const& largeRJets,
                               std::vector<fastjet::PseudoJet> const& trackjets,
                               std::vector<fastjet::PseudoJet>&       subjets1,
@@ -1020,7 +1439,7 @@ void OxfordAnalysis::HiggsFill(fastjet::PseudoJet const& H0, fastjet::PseudoJet 
     // Histograms for reconstructed Higgs candidates
     FillHistogram("pt_H0" + suffix, weight, H0.pt());
     FillHistogram("pt_H1" + suffix, weight, H1.pt());
-
+    FillHistogram("deltapt" + suffix, weight, H0.pt()-H1.pt());
     FillHistogram("m_H0" + suffix, weight, H0.m());
     FillHistogram("m_H1" + suffix, weight, H1.m());
 

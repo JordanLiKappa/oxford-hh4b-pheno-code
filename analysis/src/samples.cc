@@ -156,7 +156,8 @@ void InitHepMC(runCard const& rc, sampleCard const& sc, double& weight_norm,
 /*
   Get the information on all final state particles
  */
-void get_final_state_particles(Pythia8::Pythia& pythiaRun, finalState& particles,
+// work by Jordan: added higgsfs
+void get_final_state_particles(Pythia8::Pythia& pythiaRun, finalState& particles, finalState& higgsfs,
                                double& unit_weight) {
     unit_weight = 1;
 
@@ -171,22 +172,82 @@ void get_final_state_particles(Pythia8::Pythia& pythiaRun, finalState& particles
     for (int i = 0; i < pythiaRun.event.size(); i++) {
         // Get PDG ID
         const int particle_id = pythiaRun.event[i].id();
+	// work by Jordan:
+	// PDG id of higgs: 25
+	// here I print out all Higgs with its status, and add the final Higgs to the vector Higgs. Since the code already require the particle to be final state, no need to determine the status of Higgs. 
+ 
+	if (pythiaRun.event[i].id() == 25)
+			 { 
+//	std::cout << "****************************check higgs status**************************" << std::endl;		
+//	std::cout <<"i: " << i << " particle status: " << pythiaRun.event[i].status() << std::endl;
+			const double E  = pythiaRun.event[i].e();
+			const double px = pythiaRun.event[i].px();
+			const double py = pythiaRun.event[i].py();
+			const double pz = pythiaRun.event[i].pz();
+		
+		if (pythiaRun.event[i].status() == -22) 
+			{
 
+ 
+ 			  fastjet::PseudoJet jet(px,py,pz,E);
+			  jet.set_user_index(particle_id);
+	 		  higgsfs.push_back(jet);			 
+		        	}
+			        	}
+    // work by Jordan: b quarks id : 5, b bar id: -5, final state status 52 the higgfs[2,3] are the b quarks.
+        if (pythiaRun.event[i].id() == 5)
+             {//std::cout << pythiaRun.event[i].status() << std::endl;
+
+            const double E  = pythiaRun.event[i].e();
+            const double px = pythiaRun.event[i].px();
+            const double py = pythiaRun.event[i].py();
+            const double pz = pythiaRun.event[i].pz();
+        
+        if (pythiaRun.event[i].status() == 52) 
+            {
+
+ 
+              fastjet::PseudoJet jet(px,py,pz,E);
+              jet.set_user_index(particle_id);
+              higgsfs.push_back(jet);            
+                    }
+                        }                    
+    // work by Jordan: b quarks id : 5, b bar id: -5, final state status 52 the higgfs[4,5] are the b bar quarks.
+        if (pythiaRun.event[i].id() == -5)
+             { 
+
+            const double E  = pythiaRun.event[i].e();
+            const double px = pythiaRun.event[i].px();
+            const double py = pythiaRun.event[i].py();
+            const double pz = pythiaRun.event[i].pz();
+        
+        if (pythiaRun.event[i].status() == 52) 
+            {
+
+ 
+              fastjet::PseudoJet jet(px,py,pz,E);
+              jet.set_user_index(particle_id);
+              higgsfs.push_back(jet);            
+                    }
+                        }                  
+		 
         // Consider only final state particles
+	
         if (pythiaRun.event[i].status() <= 0) continue;
-
+	
         // Get the particle kinematics
         const double E  = pythiaRun.event[i].e();
         const double px = pythiaRun.event[i].px();
         const double py = pythiaRun.event[i].py();
         const double pz = pythiaRun.event[i].pz();
+       // Form PseudoJet
+       fastjet::PseudoJet jet(px, py, pz, E);
+       jet.set_user_index(particle_id);
 
-        // Form PseudoJet
-        fastjet::PseudoJet jet(px, py, pz, E);
-        jet.set_user_index(particle_id);
+       particles.push_back(jet);
 
-        particles.push_back(jet);
-    } // End loop over particles in event
+
+   } // End loop over particles in event
 }
 
 /*

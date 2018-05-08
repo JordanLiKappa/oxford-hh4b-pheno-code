@@ -37,11 +37,13 @@ Detector::Detector(runCard const& run, sampleCard const& sample, int const& pyth
     pythiaPileup.settings.parm("Beams:eCM", sample.sqrts);
     pythiaPileup.init();
 }
-
+//work by Jordan:
+//not sure about the PU here, just added finalstate Higgs
+finalState Higgs;
 void Detector::AddPileup(finalState& particles) {
     double dummy;
     for (int iPileup = 0; iPileup < nPileup; ++iPileup)
-        get_final_state_particles(pythiaPileup, particles, dummy);
+        get_final_state_particles(pythiaPileup, particles,Higgs, dummy);
 }
 
 void Detector::Simulate(finalState input, finalState& output) {

@@ -1,0 +1,11 @@
+So the code I have changed:
+samples.cc .h
+analysis.cc .h
+oxford.cc .h
+detector.cc
+oxford_sideban.cc .h
+oxford_atalas_qcd .cc .h
+
+I basically added finalState const& higgsfs to all the analysis function that is called.
+Then I added some lines in the oxford.cc to test if the new code can tell if
+higgs are inside the largeR jet(assuming the deltaR is 1)

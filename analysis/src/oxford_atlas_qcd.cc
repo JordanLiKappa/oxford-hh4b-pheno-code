@@ -36,11 +36,13 @@ const bool debug = false;
 const bool exclusive = true;
 
 // Analysis settings
+// work by Jordan: change cut here
 const int         nAnalysis          = 3;
-const int         nCuts              = 7;
+//const int         nCuts              = 7;
+const int         nCuts              = 36;
 const std::string aString[nAnalysis] = {"_res", "_inter", "_boost"};
-const std::string cString[nCuts] = {"_GEN", "_RCO", "_SIG", "_SDBA", "_SDBB", "_SDBBD", "_SDBBO"};
-
+//const std::string cString[nCuts] = {"_GEN", "_RCO", "_SIG", "_SDBA", "_SDBB", "_SDBBD", "_SDBBO"};
+const std::string cString[nCuts] = {"_GEN", "_RCO", "_SIG", "_SDBA", "_SDBB", "_SDBBD", "_SDBBO", "_4bC2","_3b","_3bC2","_2b","_2bC2","_1b","_1bC2","3","2","1","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"};
 // **************************** Reconstruction helper functions ****************************
 
 static vector<PseudoJet> trimJets(vector<PseudoJet> const& injets) {
@@ -293,10 +295,10 @@ OxfordAtlasQcdAnalysis::OxfordAtlasQcdAnalysis(runCard const& run, sampleCard co
 
     std::cout << "Oxford PU subtraction: " << subtractPU << std::endl;
 }
-
+//work by Jordan: added higgsfs
 void OxfordAtlasQcdAnalysis::Analyse(bool const& signal, double const& weightnorm,
-                                     finalState const& ifs, double gen_weight) {
-    Analysis::Analyse(signal, weightnorm, ifs, gen_weight);
+                                     finalState const& ifs, finalState const& higgsfs, double gen_weight) {
+    Analysis::Analyse(signal, weightnorm, ifs,higgsfs, gen_weight);
 
     // Perform softKiller subtraction
     const fastjet::contrib::SoftKiller soft_killer(2.5, 0.4);
@@ -306,7 +308,7 @@ void OxfordAtlasQcdAnalysis::Analyse(bool const& signal, double const& weightnor
     // *************************************
 
     const Selector LR_kinematics =
-          SelectorNHardest(2) * (SelectorAbsRapMax(2.0) && SelectorPtMin(200.0));
+          SelectorNHardest(2) * (SelectorAbsRapMax(2.0) && SelectorPtMin(250.0) && SelectorPtMax(400));
     const Selector SR_kinematics =
           SelectorNHardest(4) * (SelectorAbsRapMax(2.5) && SelectorPtMin(40.0));
     const Selector TR_kinematics = SelectorAbsRapMax(2.5) && SelectorPtMin(50.0);
@@ -384,23 +386,23 @@ double OxfordAtlasQcdAnalysis::BoostedAnalysis(vector<PseudoJet> const&         
             nL += std::count(tagvec.begin(), tagvec.end(), LTAG);
         }
 
-        if (nB + nC + nL == 4) // Selected 4 candidates
+        if (true) // Selected 4 candidates
         {
             if (debug) std::cout << "nB = " << nB << std::endl;
 
             // Events weighted by probability of having exactly
             // m_nBTag tagged jets, given (in btagProb) efficiency,
             // light acceptance and charm acceptance
-            const double selEff = btagProb(m_nBTag, nB, nC, nL);
-            const double selWgt = selEff * event_weight;
-            HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 1, selWgt);
+            //const double selEff = btagProb(m_nBTag, nB, nC, nL);
+            //const double selWgt = selEff * event_weight;
+            //HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 1, selWgt);
 
             const fastjet::PseudoJet dihiggs_boost = largeRJets[0] + largeRJets[1];
 
             // Higgs mass-window
-            const double diffHiggs_0 = fabs(largeRJets[0].m() - 125.);
-            const double diffHiggs_1 = fabs(largeRJets[1].m() - 125.);
-            const double massWindow  = 20.0;
+            const double diffHiggs_0 = fabs(largeRJets[0].m() - 111.);
+            const double diffHiggs_1 = fabs(largeRJets[1].m() - 111.);
+            const double massWindow  = 35;
 
             const bool signal0 = diffHiggs_0 < massWindow;
             const bool signal1 = diffHiggs_1 < massWindow;
@@ -410,8 +412,8 @@ double OxfordAtlasQcdAnalysis::BoostedAnalysis(vector<PseudoJet> const&         
 
             if (signal0 && signal1) {
 
-                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 2, selWgt);
-                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 2, selWgt);
+                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 2, 1);
+                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 2, 1);
 
                 // Calculate some substructure variables
                 const std::vector<double> split12_vec = SplittingScales(largeRJets);
@@ -429,12 +431,12 @@ double OxfordAtlasQcdAnalysis::BoostedAnalysis(vector<PseudoJet> const&         
                 const auto& higgs1  = largeRJets[0];
                 const auto& higgs2  = largeRJets[1];
                 auto        dihiggs = (higgs1 + higgs2);
-                fullNTuple << GetSample() << ",boost,SIG," << m_nBTag << "," << selWgt << ","
+                fullNTuple << GetSample() << ",boost,SIG," << m_nBTag << "," << 1 << ","
                            << dihiggs.m() << "," << dihiggs.pt() << "," << higgs1.m() << ","
                            << higgs1.pt() << "," << higgs2.m() << "," << higgs2.pt() << "\n";
                 // Fill tuple
 
-                bstNTuple << signal << "\t" << GetSample() << "\t" << selWgt << "\t" << m_nBTag
+                bstNTuple << signal << "\t" << GetSample() << "\t" << 1 << "\t" << m_nBTag
                           << "\t" << gen_weight << "\t" << largeRJets[0].pt() << "\t"
                           << largeRJets[1].pt() << "\t" << dihiggs_boost.pt() << "\t"
                           << largeRJets[0].m() << "\t" << largeRJets[1].m() << "\t"
@@ -451,46 +453,46 @@ double OxfordAtlasQcdAnalysis::BoostedAnalysis(vector<PseudoJet> const&         
                           << std::endl;
             }
             else if ((signal0 && control1) || (signal1 && control0)) {
-                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 3, selWgt);
-                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 3, selWgt);
+                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 3, 1);
+                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 3, 1);
                 const auto& higgs1  = largeRJets[0];
                 const auto& higgs2  = largeRJets[1];
                 auto        dihiggs = (higgs1 + higgs2);
-                fullNTuple << GetSample() << ",boost,SDBA," << m_nBTag << "," << selWgt << ","
+                fullNTuple << GetSample() << ",boost,SDBA," << m_nBTag << "," << 1 << ","
                            << dihiggs.m() << "," << dihiggs.pt() << "," << higgs1.m() << ","
                            << higgs1.pt() << "," << higgs2.m() << "," << higgs2.pt() << "\n";
             }
             else if (control0 && control1) {
-                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 4, selWgt);
-                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 4, selWgt);
+                HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 4, 1);
+                BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 4, 1);
 
                 // Now fill split SDBB histograms
-                bool direction_0 = (largeRJets[0].m() - 125.) > 0;
-                bool direction_1 = (largeRJets[1].m() - 125.) > 0;
+                bool direction_0 = (largeRJets[0].m() - 111.) > 0;
+                bool direction_1 = (largeRJets[1].m() - 111.) > 0;
                 bool diag        = direction_0 == direction_1;
 
                 if (diag) {
-                    HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 5, selWgt);
-                    BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 5, selWgt);
+                    HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 5, 1);
+                    BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 5, 1);
                     const auto& higgs1  = largeRJets[0];
                     const auto& higgs2  = largeRJets[1];
                     auto        dihiggs = (higgs1 + higgs2);
-                    fullNTuple << GetSample() << ",boost,SDBBD," << m_nBTag << "," << selWgt << ","
+                    fullNTuple << GetSample() << ",boost,SDBBD," << m_nBTag << "," << 1 << ","
                                << dihiggs.m() << "," << dihiggs.pt() << "," << higgs1.m() << ","
                                << higgs1.pt() << "," << higgs2.m() << "," << higgs2.pt() << "\n";
                 }
                 else {
-                    HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 6, selWgt);
-                    BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 6, selWgt);
+                    HiggsFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 6, 1);
+                    BoostFill(largeRJets[0], largeRJets[1], "boost", m_btag_string, 6, 1);
                     const auto& higgs1  = largeRJets[0];
                     const auto& higgs2  = largeRJets[1];
                     auto        dihiggs = (higgs1 + higgs2);
-                    fullNTuple << GetSample() << ",boost,SDBBO," << m_nBTag << "," << selWgt << ","
+                    fullNTuple << GetSample() << ",boost,SDBBO," << m_nBTag << "," << 1 << ","
                                << dihiggs.m() << "," << dihiggs.pt() << "," << higgs1.m() << ","
                                << higgs1.pt() << "," << higgs2.m() << "," << higgs2.pt() << "\n";
                 }
             }
-            return selWgt;
+            return 1;
         }
     }
     return 0;

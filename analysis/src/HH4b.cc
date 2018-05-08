@@ -85,14 +85,15 @@ int main(int argc, char* argv[]) {
     vector<Analysis*> analyses;
     InitAnalyses(analyses, run, sample, subsample);
     Detector detector(run, sample, pileupSeed, detectorSeed);
-
+//work by Jordan: added finalState dum 3 for Higgs
     // Skip to subsample x
     if (!sample.hepmc) {
         cout << "Subsample " << subsample << ": skipping to event " << sampleStart << endl;
         for (int iEvent = 0; iEvent < sampleStart; ++iEvent) {
             double     dum;
             finalState dum2;
-            get_final_state_particles(pythiaRun, dum2, dum);
+	    finalState dum3;
+            get_final_state_particles(pythiaRun, dum2,dum3, dum);
         }
     }
     else {
@@ -111,20 +112,31 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Number of analyses loaded: " << analyses.size() << std::endl;
-
+//work by Jordan: added fshiggs to the final state
+//
     // Begin loop over events
     cout << "*************** Analysis Begins ***************" << endl;
     const int targetSize = min(run.sub_samplesize, sample.nevt_sample - sampleStart);
     cout << "Analysing: " << targetSize << " events" << endl;
     for (int iEvent = 0; iEvent < targetSize; ++iEvent) {
 	bool extOutput = false;
-        finalState ifs, fs; // The event final state
+        finalState ifs, fs,fshiggs; // The event final state
+
+
+
+// work by Jordan:
+	std::vector<fastjet::PseudoJet> Higgs;
 
         double event_weight = 0;
+//work by Joran: added fshiggs
         if (!sample.hepmc) {
-            get_final_state_particles(pythiaRun, ifs, event_weight);
-	}
-        else {
+            get_final_state_particles(pythiaRun, ifs,fshiggs, event_weight);
+//get_asdfadsf(fadsf,afsd,Higgs,sdfdsa);
+	}  
+
+
+
+      else {
             get_final_state_particles(hepmc_is, ifs, event_weight, extOutput);
 	}
 
@@ -135,7 +147,12 @@ int main(int argc, char* argv[]) {
         double gen_weight = event_weight; // To plot raw weights
         event_weight *= weight_norm;
         for (auto& analyse : analyses){
-            analyse->Analyse(sample.is_signal, event_weight, fs, gen_weight);
+ 
+//work by Jordan:
+//this part is confusing, what should I add here?
+
+       //fs,Higgs 
+	   analyse->Analyse(sample.is_signal, event_weight, fs, fshiggs, gen_weight);
         }
 
         if ((iEvent + 1) % 100 == 0) cout << iEvent + 1 << " events analysed" << endl;
